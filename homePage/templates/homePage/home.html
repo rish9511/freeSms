@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <title>Paste and Share</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">
+        <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/js/materialize.min.js"></script>
+        <script type=text/javascript>
+      //   	/* LOADING COMPONENT*/
+      var loading = {};
+
+			loading.stopLoading = function(){
+			    $('#loading').hide(500);
+			    $('#data').fadeTo(0,1);
+			};
+      //
+			loading.startLoading = function(){
+			    $('#loading').show(500);
+			    $('#data').fadeTo(0,1);
+			};
+      //   	var interval = null;
+      //   	var timeZones ;
+      //   	var usernumber = "";
+      //   	var cCode = "";
+      //
+
+
+        $(function() {
+
+			  $('#process_input').bind ('click', function() {
+
+			  		usernumber = $('input[name="phone_number"]').val()
+			  		cCode = $('input[name="countryCode"]').val()
+			  		console.log(usernumber)
+			  		$( "#phone_number" ).prop( "disabled", true );
+			  		$( "#countryCode" ).prop( "disabled", true );
+			  		$( "#process_input" ).prop( "disabled", true );
+
+            loading.startLoading();
+
+            $.getJSON('/checkValidity', {
+
+              number: $('input[name="phone_number"]').val(),
+				      countryCode: $('input[name="countryCode"]').val(),
+				    }, function(data) {
+
+              $("html, body").animate({ scrollTop: 0 }, "slow");
+              $("html, body").animate({ scrollTop: 0 }, "slow");
+              Materialize.toast(data.result, 10000);
+
+
+			    	if(data.status == 1){
+			    		// number enterd was a valid number. check if the user is verified or not .
+
+			    		$.getJSON('/is_verified',{
+
+                number: $('input[name="phone_number"]').val(),
+				  			countryCode: $('input[name="countryCode"]').val()
+
+			    		},function(data) {
+
+			    				$("html, body").animate({ scrollTop: 0 }, "slow");
+						    	$("html, body").animate({ scrollTop: 0 }, "slow");
+						    	Materialize.toast(data.result, 10000);
+
+
+                if(data.status == 1){
+                      // user is already verified
+                      loading.stopLoading();
+					           	$( "#phone_number" ).prop( "disabled", false );
+                      $( "#process_input" ).prop( "disabled", false );
+									    $( "#countryCode" ).prop( "disabled", false );
+
+			    			}
+                if(data.status == 0){
+                  // start the verification call
+                  			 $.getJSON('/callUser',{
+
+                         number: $('input[name="phone_number"]').val(),
+    					  			 	 countryCode: $('input[name="countryCode"]').val(),
+
+                      },function(data) {
+
+    					    				$("html, body").animate({ scrollTop: 0 }, "slow");
+    								    	$("html, body").animate({ scrollTop: 0 }, "slow");
+                          Materialize.toast(data.result,10000)
+                          if(data.status == 1){
+                            // we sent the validiation code , let's check if the call went smoothly or not
+                            $(function() {
+
+                              var interval = setInterval(verify,20000)
+                              function verify(){
+                                $.getJSON('/verificationCheck',{
+                                  number: $('input[name="phone_number"]').val(),
+                                  countryCode: $('input[name="countryCode"]').val(),
+
+                                  },function(data) {
+                                    $("html, body").animate({ scrollTop: 0 }, "slow");
+                                    $("html, body").animate({ scrollTop: 0 }, "slow");
+                                  	Materialize.toast(data.result, 5000);
+
+                                    if(data.status == 1 || data.status == 0){
+                                      // the call ended and we have got the Verification status(verified/not verified).
+
+
+                                      clearInterval(interval);
+                                  		$( "#phone_number" ).prop( "disabled", false );
+                                  		$( "#countryCode" ).prop( "disabled", false );
+                                      $( "#process_input" ).prop( "disabled", false );
+                                }
+
+                              });//verificationCheck
+
+                            } // verify
+                          });
+
+                      }
+                      else{
+
+                        // we could not start the verification call:
+                        // 1. with trial account you can only make 5 verification calls a day
+                        // 2. the server was down
+                        $( "#phone_number" ).prop( "disabled", false );
+                        $( "#countryCode" ).prop( "disabled", false );
+                        $( "#process_input" ).prop( "disabled", false );
+
+                      }
+                  });// call user
+
+              }
+            });// is_verified
+          }
+          else{
+            //number entered was invalid . Enable the submit button
+            loading.stopLoading();
+              $( "#phone_number" ).prop( "disabled", false );
+              $( "#countryCode" ).prop( "disabled", false );
+              $( "#process_input" ).prop( "disabled", false );
+
+          }
+        });// checkValidity
+        return false
+      });//bind
+    });//main
+
+
+    $(function() {
+
+      $('#sendSms').bind('click',function(){
+
+        number = $('input[name="phone_number2"]').val();
+        cCode = $('input[name="countryCode2"]').val();
+        console.log(number)
+        console.log("its working")
+        $( "#phone_number2" ).prop( "disabled", true );
+        $( "#countryCode2" ).prop( "disabled", true );
+        $( "#sendSms" ).prop( "disabled", true );
+        $.getJSON('/sendSms',{
+
+          number: $('input[name="phone_number2"]').val(),
+          cCode : $('input[name="countryCode2"]').val(),
+          message: $("#message").val(),
+
+        }, function(data){
+
+          Materialize.toast(data.result,5000)
+          $( "#phone_number2" ).prop( "disabled", false );
+          $( "#countryCode2" ).prop( "disabled", false );
+          $( "#sendSms" ).prop( "disabled", false );
+
+
+        });//sendSms
+        return false
+      });//bind
+
+    });//main
+
+
+							// 				$('#vCode').text(data.result);
+							// 				$('#modal1').openModal({
+							// 			    	complete: function() { console.log("working");loading.startLoading(); }
+							// 			    });
+							//     		// lets see if the verification call went smoothly or not
+              //
+							//     			$(function(){
+							//     					var interval = setInterval(verify,20000);
+							//     					function verify(){
+              //
+							//     						$.getJSON('/verificationCheck',{
+				    	// 								number: $('input[name="phone_number"]').val(),
+					  	// 								countryCode: $('input[name="countryCode"]').val(),
+					  	// 								tZone: $('select[id="zones"]').val()
+			    		// 								},function(data) {
+              //
+			    		// 								$("html, body").animate({ scrollTop: 0 }, "slow");
+							// 	    					$("html, body").animate({ scrollTop: 0 }, "slow");
+							// 	    					Materialize.toast(data.result, 5000);
+			    		// 								if(data.status == 1 || data.status == 0){
+			    		// 									clearInterval(interval);
+			    		// 									loading.stopLoading()
+			    		// 									$( "#phone_number" ).prop( "disabled", false );
+							// 								$( "#countryCode" ).prop( "disabled", false );
+			    		// 									$( "#process_input" ).prop( "disabled", false );
+			    		// 								}
+              //
+			    		// 							});//verificationCheck
+              //
+							//     				}
+							//     			});
+              //
+			    						// }
+			    		// 				else{
+			    		// 					// we could not start the verification call .Enable the submit button
+			    		// 							Materialize.toast(data.result, 30000);
+			    		// 							loading.stopLoading()
+			    		// 					     	$( "#phone_number" ).prop( "disabled", false );
+							// 						$( "#countryCode" ).prop( "disabled", false );
+			    		// 							$( "#process_input" ).prop( "disabled", false );
+			    		// 				}
+			    					// }); //call user
+			    		// 		}
+              //
+			    		// 		else{
+							// 		// we could not check whether the user was verified or not. Enable the submit button
+							// 		$( "#phone_number" ).prop( "disabled", false );
+							// 		$( "#countryCode" ).prop( "disabled", false );
+			    		// 			$( "#process_input" ).prop( "disabled",false );
+			    		// 		}
+			    		// });// is_verified
+
+
+
+			    // });//check_validity
+
+
+
+
+
+
+
+
+
+	</script>
+
+	<!-- /*<style>
+		#loading{
+			width:100%;
+			height: 100%;
+			background-color: white;
+			opacity: 1;
+			z-index: 1000;
+			position:absolute;
+		}
+
+	</style> -->
+    </head>
+    <body>
+    	<main>
+    	<!-- <div id="loading">
+    		<br><br><br><br><br><br><br><br><br><br>
+    		<div class="row">
+    			<div class="col offset-l5 l4">
+    				<h3>Processing.......</h3>
+    			</div>
+    		</div>
+    		<div class="row">
+    			<div class="col offset-l4 l4">
+    				<div class="progress">
+				      	<div class="indeterminate"></div>
+				  	</div>
+    			</div>
+    		</div>
+    	</div>*/ -->
+      <div id="register">
+      <div class="row">
+        <div class="col l8 offset-l2" >
+          <div class="row ">
+            <div class="row">
+            <div class="col l6 offset-l3 center flow-text">
+              Register
+              <div class="divider"></div>
+            </div>
+          </div>
+            <div class="card-panel col l8 offset-l2   center">
+              <div class="row">
+                <div class="col l8 offset-l2">
+                  <form name="add_phone_number_form">
+                    <div class="input-field col l12">
+                      <input id="countryCode" name="countryCode" type="text">
+                      <label for="countryCode">Country Code</label>
+                    </div>
+                    <div class="input-field col l12">
+                      <input id="phone_number" name="phone_number" type="text">
+                      <label for="phone_number">Phone Number</label>
+                    </div>
+                    <div class="col l10 offset-l1 center"><br>
+                      <button id= "process_input" class="waves-effect waves-light  btn yellow accent-4" >
+                      <span style="color:black">Register<i class="material-icons right">send</i></span>
+                      </button>
+                    </div>
+                  </form>
+            </div>
+            </div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+    <div class="row">
+        <div class="col l8  offset-l2" >
+          <div class="row">
+            <div class="row">
+            <div class="col l6 offset-l3 center flow-text">
+              Send Message
+              <div class="divider"></div>
+            </div>
+          </div>
+            <div class="card-panel col l8 offset-l2  center">
+              <div class="row">
+                <div class="col l8 offset-l2">
+                  <form name="send_message_form">
+                    <div class="input-field col l12 black-text text-darken-2">
+                      <input id="countryCode2" name="countryCode2" type="text">
+                      <label for="countryCode2">Country Code</label>
+                    </div>
+                    <div class="input-field col l12">
+                      <input id="phone_number2" name="phone_number2" type="text">
+                      <label for="phone_number2">Phone Number</label>
+                    </div>
+                    <div class="input-field col l12">
+                      <textarea id="message" class="materialize-textarea"></textarea>
+                      <label for="message"><i class="material-icons ">textsms</i></label>
+                    </div>
+                    <div class="col l10 offset-l1 center"><br>
+                      <button id= "sendSms" class="waves-effect waves-light  btn yellow accent-4" >
+                      <span style="color:black">Send<i class="material-icons right">send</i></span>
+                      </button>
+                    </div>
+                  </form>
+            </div>
+            </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+		</main>
+		<!-- <div id="modal1" class="modal">
+    		<div class="modal-content">
+      			<center><h4>Validation code</h4></center>
+	     			<h5 id ="vCode"></h5>
+	    	</div>
+	    <div class="modal-footer">
+	      <a href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Okay</a>
+	    </div>
+	  	</div> -->
+
+	</body>
+</html>
